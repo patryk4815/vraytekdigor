@@ -1,10 +1,17 @@
+{
+  nixpkgs_src ? (builtins.fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/1f1eefec2290138f21958df522de23104a445df7.tar.gz";
+    sha256 = "0k5k66fqv6dgq75jyvzxgssc6i0ych4rdqf55pcwq3paz10p9kai";
+  })
+  , system ? builtins.currentSystem
+  , flakeGitHash ? null
+}:
 let
   # Make a nixpkgs configured to cross-compile for mips, and with our custom
   # packages overlaid.
-  nixpkgs = import (builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/1f1eefec2290138f21958df522de23104a445df7.tar.gz";
-    sha256 = "0k5k66fqv6dgq75jyvzxgssc6i0ych4rdqf55pcwq3paz10p9kai";
-  }) {
+  nixpkgs = import nixpkgs_src {
+    system = system;
+
     crossSystem = {
       libc = "musl";
       config = "mips-unknown-linux-musl";
@@ -31,12 +38,12 @@ let
       })
     ];
   };
-
 in
 
 # Use the above nixpkgs. Everything below is in MIPS-land unless defined
 # otherwise..
 with nixpkgs; with builtins; let
+  gitHash = if flakeGitHash != null then flakeGitHash else cfwlib.gitHash;
 
   # Make a MOTD file containing the current revision.
   motd = pkgs.writeText "motd"
@@ -45,7 +52,7 @@ with nixpkgs; with builtins; let
       | | / /______ ___ _/_  __/__ / /__  / _ \(_)__ ____  ____
       | |/ / __/ _ `/ // // / / -_)  '_/ / // / / _ `/ _ \/ __/
       |___/_/  \_,_/\_, //_/  \__/_/\_\ /____/_/\_, /\___/_/
-                   /___/ CFW, git rev ${cfwlib.gitHash} /___/
+                   /___/ CFW, git rev ${gitHash} /___/
     '';
 
 in
@@ -56,7 +63,7 @@ in
   # panel.
   cfw = cfwlib.makeCustomFirmware {
     modelSlug = "v167";
-    gitRevision = cfwlib.gitHash;
+    gitRevision = gitHash;
     originalZip = pkgs.fetchurl {
       name = "vigor167-5.0.1";
       url = "http://draytek.com/download_de/Firmwares-Modem/Vigor160-Serie/Vigor167/Vigor167_v5.0.1_STD.zip";
@@ -83,7 +90,7 @@ in
           {
             op = "replace";
             path = "/fw_ver";
-            value = "5.0.1 VraytekDigor ${cfwlib.gitHash}";
+            value = "5.0.1 VraytekDigor ${gitHash}";
           }
         ])}"
       } }
