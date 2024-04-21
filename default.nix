@@ -11,7 +11,7 @@ let
   # packages overlaid.
   nixpkgs = import nixpkgs_src {
     system = system;
-
+    config.allowUnsupportedSystem = true;
     crossSystem = {
       libc = "musl";
       config = "mips-unknown-linux-musl";
